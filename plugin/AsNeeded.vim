@@ -1,8 +1,8 @@
 " AsNeeded: allows functions/maps to reside in .../.vim/AsNeeded/ directory
 "           and will enable their loaded as needed
 " Author:	Charles E. Campbell, Jr.
-" Date:		Feb 16, 2005
-" Version:	7
+" Date:		Feb 17, 2005
+" Version:	8
 "
 " Usage: {{{1
 "
@@ -26,7 +26,7 @@
 if exists("g:loaded_AsNeeded") || &cp
  finish
 endif
-let g:loaded_AsNeeded= "v7"
+let g:loaded_AsNeeded= "v8"
 
 " ---------------------------------------------------------------------
 "  Public Interface:	{{{1
@@ -74,7 +74,7 @@ fun! AsNeeded(type,cmdmap)
    elseif a:type >= 2
     let srchstring= substitute(a:cmdmap,' .*$','','e')
     if exists("g:mapleader") && match(srchstring,'^'.g:mapleader) == 0
-	 let srchstring= substitute(srchstring,'^.\(.*\)$','&\|<[lL][eE][aA][dD][eE][rR]>\1','')
+	 let srchstring= substitute(srchstring,'^.\(.*\)$','&\\|<[lL][eE][aA][dD][eE][rR]>\1','')
 	endif
     let srch= search('^[mc]\t'.srchstring)
    endif
@@ -169,7 +169,7 @@ fun! AsNeeded(type,cmdmap)
 	else
 	 " attempt to execute a:cmdmap as a normal command (ie. a map)
 "	 call Decho("norm ".a:cmdmap)
-   	 exe "silent! norm ".a:cmdmap
+   	 exe "norm ".a:cmdmap
 	endif
    endif
    if asneededbufnr > keeplastbufnr
@@ -334,7 +334,7 @@ finish
 " ---------------------------------------------------------------------
 " Put the help after the HelpExtractorDoc label...
 " HelpExtractorDoc:
-*asneeded.txt*	Loading Functions, Maps, and Commands AsNeeded	Nov 23, 2004
+*asneeded.txt*	Loading Functions, Maps, and Commands AsNeeded	Feb 17, 2005
 
 Author:  Charles E. Campbell, Jr.  <drNchipO@ScampbellPfamilyA.bizM>
 	  (remove NOSPAM from Campbell's email to use)
@@ -392,6 +392,8 @@ Author:  Charles E. Campbell, Jr.  <drNchipO@ScampbellPfamilyA.bizM>
 ==============================================================================
 4. AsNeeded History					*asneeded-history*
 
+	v8 Feb 16, 2005 : * With MakeANtags, AsNeeded's search pattern needed
+			    to use \\| instead of \|
 	v7 Feb 16, 2005 : * MakeANtags now warns the user when no tags were
 			    found in some vim-script file 
 			  * MakeANtags would occasionally miss certain maps
