@@ -1,0 +1,40 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=915
+
+  [AsNeeded V14 AND LATER REQUIRES VIMBALL V18 OR LATER FOR UNPACKING]
+
+The AsNeeded plugin loads plugins from the .vim/AsNeeded directory only as they're needed.  One major advantage over vim 7.0's autoload method is: plugins don't need to be changed!   Just put the plugin in the AsNeeded directory (usually under .vim/ or vimfiles\).  It'll work even better if you type :MkAsNeeded while in vim after having updated your AsNeeded directory, too.
+
+So, how does it work?  Well, whenever a plugin attempts to execute a function that hasn't been loaded yet, AsNeeded will find the script in the AsNeeded directory, load the script, and execute the function.
+
+And, whenever you want to execute a command that's not been loaded yet, and you've run :MkAsNeeded, then the plugin will be transparently loaded and the command executed!  If you didn't do :MkAsNeeded, or you wish to use a map, then instead you can use
+
+	:AN map
+	:AN command [arguments]
+
+and AsNeeded will locate the map or command, load the script, and make the map or command available for your subsequent use.  Alternatively, you can use
+
+	:ANX map
+	:ANX command [arguments]
+
+and AsNeeded will do what :AN would do plus attempt to execute the map or command.
+
+For even faster loading of your desired function, map, or command, you can (as of v6) use
+
+	:MkAsNeeded
+
+This command will create a <ANtags> file in your AsNeeded subdirectory which basically lists your maps, functions, and commands and couples them with their associated source file.  When you then use :AN, :AsNeeded, or :ANX, AsNeeded will use that file to quickly load the associated source file.
+
+And, now for a user testimonal!
+
+    Zdenek Sekera (by permission)
+
+    I use FuncUndefined sometimes but most of the
+    time I use the AsNeeded mechanism of Dr.Chips,
+    which is very clever, very complete and completely
+    unintrusive, there is almost nothing to do once
+    the mechanics is setup.  It even finds functions
+    (mappings as well!!) inside a file of a different
+    name, etc...  Very pleasant.
+
+(alpha/beta version available at http://mysite.verizon.net/astronaut/vim/index.html#ASNEEDED)
+
