@@ -1,8 +1,8 @@
 " AsNeeded: allows functions/maps to reside in .../.vim/AsNeeded/ directory
 "           and will enable their loaded as needed
 " Author:	Charles E. Campbell, Jr.
-" Date:		Feb 17, 2005
-" Version:	8
+" Date:		Jul 12, 2005
+" Version:	9
 "
 " Usage: {{{1
 "
@@ -21,12 +21,18 @@
 " To speed up the process, generate a ANtags file
 "   :MakeANtags
 "
+" Isaiah 42:1 : Behold, my servant, whom I uphold; my chosen, in whom {{{1
+" my soul delights: I have put my Spirit on him; he will bring forth
+" justice to the Gentiles.
+"
 " GetLatestVimScripts: 915 1 :AutoInstall: AsNeeded.vim
 " Load Once: {{{1
 if exists("g:loaded_AsNeeded") || &cp
  finish
 endif
-let g:loaded_AsNeeded= "v8"
+let g:loaded_AsNeeded = "v9"
+let s:keepcpo         = &cpo
+set cpo&vim
 
 " ---------------------------------------------------------------------
 "  Public Interface:	{{{1
@@ -75,6 +81,9 @@ fun! AsNeeded(type,cmdmap)
     let srchstring= substitute(a:cmdmap,' .*$','','e')
     if exists("g:mapleader") && match(srchstring,'^'.g:mapleader) == 0
 	 let srchstring= substitute(srchstring,'^.\(.*\)$','&\\|<[lL][eE][aA][dD][eE][rR]>\1','')
+	 if srchstring =~ '^\\'
+	  let srchstring= '\\'.srchstring
+	 endif
 	endif
     let srch= search('^[mc]\t'.srchstring)
    endif
@@ -218,9 +227,17 @@ fun! MakeANtags()
 "  call Decho("asneededbufnr=".asneededbufnr)
   setlocal noswapfile
 
-  let fncsrch= '\<fu\%[nction]!\=\s*\(\u\w*\)\>'
-  let mapsrch= '\<\%(map\|[nvoilc]m\%[ap]\|[oic]\=no\%[remap]\|[nl]n\%[oremap]\)!\=\s\+\%(<\%([sS][iI][lL][eE][nN][tT]\|[uU][nN][iI][qQ][uU][eE]\|[bB][uU][fF][fF][eE][rR]\|[sS][cC][rR][iI][pP][tT]\)>\s\+\)*\(\S\+\)\s'
-  let cmdsrch= 'com\%[mand]!\=\s.*\(\u\w*\)\>'
+  let fncsrch  = '\<fu\%[nction]!\=\s\+\%([sS]:\|<[sS][iI][dD]>\)\@<!\(\u\w*\)\s*('
+  let mapsrch  = '\<\%(map\|[nvoilc]m\%[ap]\|[oic]\=no\%[remap]\|[nl]n\%[oremap]\)!\=\s\+\%(<\%([sS][iI][lL][eE][nN][tT]\|[uU][nN][iI][qQ][uU][eE]\|[bB][uU][fF][fF][eE][rR]\|[sS][cC][rR][iI][pP][tT]\)>\s\+\)*\(\S\+\)\s'
+  let cmdsrch  = '\<com\%[mand]!\=\s.\{-}\(\u\w*\)\>'
+  let fmcsrch  = fncsrch.'\|'.mapsrch.'\|'.cmdsrch
+  let mapreject= '\<\%(map\|[nvoilc]m\%[ap]\|[oic]\=no\%[remap]\|[nl]n\%[oremap]\)!\=\s\+\%(<\%([sS][iI][lL][eE][nN][tT]\|[uU][nN][iI][qQ][uU][eE]\|[bB][uU][fF][fF][eE][rR]\|[sS][cC][rR][iI][pP][tT]\)>\s\+\)*<[pP][lL][uU][gG]>\(\u\w*\)\s'
+
+  " remove any old <ANtags>
+  if filereadable(globpath(&rtp,"AsNeeded/ANtags"))
+"   call Decho("removing old <ANtags>")
+   call delete(globpath(&rtp,"AsNeeded/ANtags"))
+  endif
 
   " ---------------------------------------------
   " search for all commands, maps, and functions: {{{2
@@ -242,15 +259,26 @@ fun! MakeANtags()
    endif
 
    " clean out all non-map, non-command, non-function lines
-   let fmcsrch= fncsrch.'\|'.mapsrch.'\|'.cmdsrch
    silent! g/^\s*"/d
    silent! g/\c<script>/d
+   exe 'silent! %g@'.mapreject.'@d'
+   silent! g/^\s*echo\(err\|msg\)\=\>/d
+   silent! %s/^\s*exe\%[cute]\s\+['"]\(.*\)['"]/\1/e
+   " remove anything that doesn't look like a map, command, or function
    exe "silent! v/".fmcsrch."/d"
+"   call Decho("Before conversion to ANtags-style:")
+"   call Dredir("%p")
 
    " convert remaining lines into ANtag-style search patterns
-   exe 'silent! %s@^.*'.fncsrch.'.*$@f\t\1\t'.escape(vimfile,'@ \').'@e'
+   exe 'silent! %s@^[ \t:]*'.fncsrch.'.*$@f\t\1\t'.escape(vimfile,'@ \').'@e'
    exe 'silent! %s@^.*'.mapsrch.'.*$@m\t\1\t'.escape(vimfile,'@ \').'@e'
-   exe 'silent! %s@^.*'.cmdsrch.'.*$@c\t\1\t'.escape(vimfile,'@ \').'@e'
+   exe 'silent! %s@^[ \t:]*'.cmdsrch.'.*$@c\t\1\t'.escape(vimfile,'@ \').'@e'
+
+   " clean up anything that snuck into <ANtags> that shouldn't be there.
+   silent v/^[mfc]\t/d
+   silent g/^m\t"\./d
+   silent g/^m\t<[sS][iI][dD]>/d
+   silent g/^m\t.*'\./d
 
    " record in <ANtags>
    if  line("$") <= 1 && col("$") <= 2
@@ -266,12 +294,14 @@ fun! MakeANtags()
 "     call Decho(".append ".line("$")." tags to ANtags<".ANtags.">")
      exe "silent w >>".ANtags
     endif
+"	call Decho("After conversion to ANtags-style:")
 "    call Dredir("%p")
    endif
 
    let vimfile= ""
   endwhile
   q!
+
 
   " ------------------------------
   " restore registers and settings {{{2
@@ -283,21 +313,37 @@ fun! MakeANtags()
 "  call Dret("MakeANtags")
 endfun
 
+let &cpo= s:keepcpo
+unlet s:keepcpo
 " ---------------------------------------------------------------------
 " vim: ts=4 fdm=marker
 " HelpExtractor:
 "  Author:	Charles E. Campbell, Jr.
 "  Version:	3
-"  Date:	Sep 09, 2004
+"  Date:	May 25, 2005
 "
 "  History:
+"    v3 May 25, 2005 : requires placement of code in plugin directory
+"                      cpo is standardized during extraction
 "    v2 Nov 24, 2003 : On Linux/Unix, will make a document directory
 "                      if it doesn't exist yet
 "
 " GetLatestVimScripts: 748 1 HelpExtractor.vim
 " ---------------------------------------------------------------------
 set lz
-let docdir = substitute(expand("<sfile>:r").".txt",'\<plugin[/\\].*$','doc','')
+let s:HelpExtractor_keepcpo= &cpo
+set cpo&vim
+let docdir = expand("<sfile>:r").".txt"
+if docdir =~ '\<plugin\>'
+ let docdir = substitute(docdir,'\<plugin[/\\].*$','doc','')
+else
+ if has("win32")
+  echoerr expand("<sfile>:t").' should first be placed in your vimfiles\plugin directory'
+ else
+  echoerr expand("<sfile>:t").' should first be placed in your .vim/plugin directory'
+ endif
+ finish
+endif
 if !isdirectory(docdir)
  if has("win32")
   echoerr 'Please make '.docdir.' directory first'
@@ -329,6 +375,8 @@ set nolz
 unlet docdir
 unlet curfile
 "unlet docfile
+let &cpo= s:HelpExtractor_keepcpo
+unlet s:HelpExtractor_keepcpo
 finish
 
 " ---------------------------------------------------------------------
@@ -392,6 +440,10 @@ Author:  Charles E. Campbell, Jr.  <drNchipO@ScampbellPfamilyA.bizM>
 ==============================================================================
 4. AsNeeded History					*asneeded-history*
 
+	v9 Mar 15, 2005 : * MakeANtags command search pattern improved
+			  * MakeANtags' function search pattern improved
+	   Apr 22, 2005   * maps beginning with a backslash needed one extra
+	                    leading backslash in their search pattern for ANtags
 	v8 Feb 16, 2005 : * With MakeANtags, AsNeeded's search pattern needed
 			    to use \\| instead of \|
 	v7 Feb 16, 2005 : * MakeANtags now warns the user when no tags were
