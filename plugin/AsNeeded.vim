@@ -1,8 +1,17 @@
 " AsNeeded: allows functions/maps to reside in .../.vim/AsNeeded/ directory
 "           and will enable their loaded as needed
 " Author:	Charles E. Campbell, Jr.
-" Date:		Jul 12, 2005
-" Version:	9
+" Date:		Nov 07, 2005
+" Version:	10
+" Copyright:    Copyright (C) 2004-2005 Charles E. Campbell, Jr. {{{1
+"               Permission is hereby granted to use and distribute this code,
+"               with or without modifications, provided that this copyright
+"               notice is copied with it. Like anything else that's free,
+"               AsNeeded.vim is provided *as is* and comes with no warranty
+"               of any kind, either expressed or implied. By using this
+"               plugin, you agree that in no event will the copyright
+"               holder be liable for any damages resulting from the use
+"               of this software.
 "
 " Usage: {{{1
 "
@@ -30,7 +39,7 @@
 if exists("g:loaded_AsNeeded") || &cp
  finish
 endif
-let g:loaded_AsNeeded = "v9"
+let g:loaded_AsNeeded = "v10"
 let s:keepcpo         = &cpo
 set cpo&vim
 
@@ -49,13 +58,20 @@ com! -nargs=0 MakeANtags call MakeANtags()
 fun! AsNeeded(type,cmdmap)
 "  call Dfunc("AsNeeded(type=".a:type.",cmdmap<".a:cmdmap.">)")
 
+  if a:type == 1 && a:cmdmap =~ '#'
+   " don't consider function names with '#' embedded - ie. let Bram's
+   " autoload try without interference
+"   call Dret("AsNeeded 0")
+   return 0
+  endif
+
   " ------------------------------
   " save&set registers and options {{{2
   " ------------------------------
-  let keepa = @a
-  let eikeep= &ei
-  set lz
-  set ei=all
+  let keeprep = &report
+  let keepa   = @a
+  let keepei  = &ei
+  set lz ei=all report=10000
 
   " -------------------------------------------
   " initialize search for requested command/map {{{2
@@ -75,17 +91,24 @@ fun! AsNeeded(type,cmdmap)
    %d
    exe "silent 0r ".ANtags
 
-   if     a:type ==1
+   if     a:type == 1
     let srch= search("^f\t".a:cmdmap)
    elseif a:type >= 2
     let srchstring= substitute(a:cmdmap,' .*$','','e')
+"	call Decho("srchstring<".srchstring.">")
     if exists("g:mapleader") && match(srchstring,'^'.g:mapleader) == 0
-	 let srchstring= substitute(srchstring,'^.\(.*\)$','&\\|<[lL][eE][aA][dD][eE][rR]>\1','')
+	 let srchstring= substitute(escape(srchstring,'\'),'^.\(.*\)$','&\\|<[lL][eE][aA][dD][eE][rR]>\1','')
 	 if srchstring =~ '^\\'
-	  let srchstring= '\\'.srchstring
+	  let srchstring= '\\'
 	 endif
 	endif
-    let srch= search('^[mc]\t'.srchstring)
+"	call Decho("srchstring<".srchstring.">")
+	let result= search('^[mc]\t\<'.srchstring.'\>')
+	if result == 0
+     let srch= search('^[mc]\t'.srchstring)
+	else
+	 let srch= result
+	endif
    endif
 "   call Decho("using <ANtags>: srchstring<".srchstring."> srch=".srch)
 
@@ -154,8 +177,9 @@ fun! AsNeeded(type,cmdmap)
   " restore registers and settings {{{2
   " ------------------------------
   set nolz
-  let @a  = keepa
-  let &ei = eikeep
+  let @a      = keepa
+  let &ei     = keepei
+  let &report = keeprep
 
   " ---------------------------
   " source in the selected file {{{2
@@ -212,10 +236,10 @@ fun! MakeANtags()
   " ------------------------------
   " save&set registers and options {{{2
   " ------------------------------
-  let keepa = @a
-  let eikeep= &ei
-  set lz
-  set ei=all
+  let keepa   = @a
+  let keepei  = &ei
+  let keeprep = &report
+  set lz ei=all report=10000
 
   " --------------------------------------------------------
   " initialize search for all commands, maps, and functions: {{{2
@@ -307,15 +331,19 @@ fun! MakeANtags()
   " restore registers and settings {{{2
   " ------------------------------
   set nolz
-  let @a  = keepa
-  let &ei = eikeep
+  let @a      = keepa
+  let &ei     = keepei
+  let &report = keeprep
 
 "  call Dret("MakeANtags")
 endfun
 
+" ---------------------------------------------------------------------
+"  Restore Cpo: {{{1
 let &cpo= s:keepcpo
 unlet s:keepcpo
 " ---------------------------------------------------------------------
+"  Modelines: {{{1
 " vim: ts=4 fdm=marker
 " HelpExtractor:
 "  Author:	Charles E. Campbell, Jr.
@@ -382,10 +410,14 @@ finish
 " ---------------------------------------------------------------------
 " Put the help after the HelpExtractorDoc label...
 " HelpExtractorDoc:
-*asneeded.txt*	Loading Functions, Maps, and Commands AsNeeded	Feb 17, 2005
+*asneeded.txt*	Loading Functions, Maps, and Commands AsNeeded	Aug 17, 2005
 
 Author:  Charles E. Campbell, Jr.  <drNchipO@ScampbellPfamilyA.bizM>
 	  (remove NOSPAM from Campbell's email to use)
+Copyright: (c) 2004-2005 by Charles E. Campbell, Jr.	*asneeded-copyright*
+           The VIM LICENSE applies to AsNeeded.vim and AsNeeded.txt
+           (see |copyright|) except use "AsNeeded" instead of "Vim"
+	   No warranty, express or implied.  Use At-Your-Own-Risk.
 
 ==============================================================================
 1. Contents						*asneeded-contents*
@@ -440,6 +472,8 @@ Author:  Charles E. Campbell, Jr.  <drNchipO@ScampbellPfamilyA.bizM>
 ==============================================================================
 4. AsNeeded History					*asneeded-history*
 
+	v10 Aug 08, 2005: * Bugfix -- maps with backslashes are escaped
+	    Aug 17, 2005: * report option workaround
 	v9 Mar 15, 2005 : * MakeANtags command search pattern improved
 			  * MakeANtags' function search pattern improved
 	   Apr 22, 2005   * maps beginning with a backslash needed one extra
