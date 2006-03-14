@@ -1,8 +1,8 @@
 " AsNeeded: allows functions/maps to reside in .../.vim/AsNeeded/ directory
 "           and will enable their loaded as needed
 " Author:	Charles E. Campbell, Jr.
-" Date:		Feb 10, 2006
-" Version:	11
+" Date:		Mar 14, 2006
+" Version:	12
 " Copyright:    Copyright (C) 2004-2005 Charles E. Campbell, Jr. {{{1
 "               Permission is hereby granted to use and distribute this code,
 "               with or without modifications, provided that this copyright
@@ -39,7 +39,7 @@
 if exists("g:loaded_AsNeeded") || &cp
  finish
 endif
-let g:loaded_AsNeeded = "v11"
+let g:loaded_AsNeeded = "v12"
 let s:keepcpo         = &cpo
 set cpo&vim
 
@@ -69,11 +69,7 @@ fun! AsNeeded(type,cmdmap)
   " ------------------------------
   " save&set registers and options {{{2
   " ------------------------------
-  let keeprep = &report
-  let keepa   = @a
-  let keepei  = &ei
-  let keeplz  = &lz
-  set lz ei=all report=10000
+  call s:SaveSettings()
 
   " -------------------------------------------
   " initialize search for requested command/map {{{2
@@ -177,7 +173,9 @@ fun! AsNeeded(type,cmdmap)
   " ---------------------------
   if exists("vimfile") && vimfile != ""
 "   call Decho("success: sourcing ".vimfile)
+   call s:RestoreSettings()
    exe "so ".vimfile
+   call s:SaveSettings()
    if exists("g:AsNeededSuccess")
     let vimf=substitute(vimfile, $HOME, '\~', '')
 	if exists("srchstring")
@@ -190,6 +188,7 @@ fun! AsNeeded(type,cmdmap)
    if a:type == 3 && exists("mapstring")
     let maprhs= maparg(a:cmdmap,'n')
 "    call Decho("type==".a:type.": maprhs<".maprhs."> mapstring<".mapstring.">")
+    call s:RestoreSettings()
    	if maprhs == ""
 	 " attempt to execute a:cmdmap as a command (with no arguments)
 "	 call Decho("exe ".a:cmdmap)
@@ -200,30 +199,18 @@ fun! AsNeeded(type,cmdmap)
    	 exe "norm ".a:cmdmap
 	endif
    endif
+
    if asneededbufnr > keeplastbufnr
+    call s:SaveSettings()
 "    call Decho("bwipe asneeded buf#".asneededbufnr)
     exe "silent! ".asneededbufnr."bwipe!"
+	call s:RestoreSettings()
    endif
-    " ------------------------------
-    " restore registers and settings {{{2
-    " ------------------------------
-    set nolz
-    let @a      = keepa
-    let &ei     = keepei
-    let &lz     = keeplz
-    let &report = keeprep
 "   call Dret("AsNeeded 0")
    return 0
   endif
 
-  " ------------------------------
-  " restore registers and settings {{{2
-  " ------------------------------
-  set nolz
-  let @a      = keepa
-  let &ei     = keepei
-  let &lz     = keeplz
-  let &report = keeprep
+  call s:RestoreSettings()
 
   " ----------------------------------------------------------------
   " failed to find srchstring in *.vim files in AsNeeded directories {{{2
@@ -338,7 +325,6 @@ fun! MakeANtags()
   endwhile
   q!
 
-
   " ------------------------------
   " restore registers and settings {{{2
   " ------------------------------
@@ -348,6 +334,29 @@ fun! MakeANtags()
   let &report = keeprep
 
 "  call Dret("MakeANtags")
+endfun
+
+" ---------------------------------------------------------------------
+" SaveSettings: {{{1
+fun! s:SaveSettings()
+"  call Dfunc("SaveSettings()")
+  let s:keeprep = &report
+  let s:keepa   = @a
+  let s:keepei  = &ei
+  let s:keeplz  = &lz
+  set lz ei=all report=10000
+"  call Dret("SaveSettings")
+endfun
+
+" ---------------------------------------------------------------------
+" s:RestoreSettings: {{{1
+fun! s:RestoreSettings()
+"  call Dfunc("s:RestoreSettings()")
+  let @a      = s:keepa
+  let &ei     = s:keepei
+  let &lz     = s:keeplz
+  let &report = s:keeprep
+"  call Dret("s:RestoreSettings")
 endfun
 
 " ---------------------------------------------------------------------
@@ -422,7 +431,7 @@ finish
 " ---------------------------------------------------------------------
 " Put the help after the HelpExtractorDoc label...
 " HelpExtractorDoc:
-*asneeded.txt*	Loading Functions, Maps, and Commands AsNeeded	Feb 10, 2006
+*asneeded.txt*	Loading Functions, Maps, and Commands AsNeeded	Mar 07, 2006
 
 Author:  Charles E. Campbell, Jr.  <drNchipO@ScampbellPfamilyA.bizM>
 	  (remove NOSPAM from Campbell's email to use)
@@ -467,8 +476,9 @@ Copyright: (c) 2004-2005 by Charles E. Campbell, Jr.	*asneeded-copyright*
 	the requested command or map.
 
 	For those who have large numbers of scripts in their AsNeeded directory,
-	using >
+	using either >
 		:MakeANtags
+		:MkAsNeeded
 <
 	will create a ANtags file in the AsNeeded directory.  This file will then
 	be used to quickly look up the requested map, command, or function; the
@@ -484,6 +494,11 @@ Copyright: (c) 2004-2005 by Charles E. Campbell, Jr.	*asneeded-copyright*
 ==============================================================================
 4. AsNeeded History					*asneeded-history*
 
+	v12 Mar 07, 2006: * AsNeeded now saves and restores settings in such
+	                    a way that if a command/map/script-sourcing
+			    changes vim settings it will be retained, instead
+			    of whatever settings were in effect when AsNeeded
+			    was first invoked
 	v11 Jan 03, 2006  * Bugfix -- AsNeeded's success message sometimes
 	                    caused an error because srchstring didn't exist
 	    Jan 25, 2006  * internally used temporary buffers now wiped out
